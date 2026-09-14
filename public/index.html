@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ยืมได้ — คลังแบ่งปันอุปกรณ์ชุมชน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#20242A;
+    --ink-soft:#565C63;
+    --canvas:#EDEDE3;
+    --surface:#FBFBF6;
+    --line:#C7C0AC;
+    --peg:#1F4B5E;
+    --peg-dark:#173A48;
+    --peg-tint:#E4EAEC;
+    --accent:#E1691F;
+    --accent-tint:#FBE6D6;
+    --warn:#B23A22;
+    --warn-tint:#F7DCD3;
+    --ok:#2F7A4F;
+    --ok-tint:#DEEEE1;
+    --radius-tag:10px;
+    --shadow:0 1px 0 rgba(32,36,42,0.06);
+  }
+  /* ============ Reset & base ============ */
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--canvas);
+    color:var(--ink);
+    font-family:'Sarabun',sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Kanit',sans-serif;
+    font-weight:600;
+    letter-spacing:0.2px;
+    margin:0;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+
+  header{background:var(--peg);color:#fff;border-bottom:4px solid var(--peg-dark);}
+  .header-inner{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;}
+  .logo{display:flex;align-items:center;gap:10px;}
+  .logo-mark{width:34px;height:34px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:'Kanit',sans-serif;font-weight:700;color:#fff;font-size:16px;}
+  .logo-text{font-family:'Kanit',sans-serif;font-weight:700;font-size:20px;color:#fff;}
+  .logo-sub{font-size:12.5px;color:#C9D8DD;margin-top:1px;}
+  nav{display:flex;gap:8px;}
+  nav button{background:transparent;border:1px solid rgba(255,255,255,0.28);color:#fff;padding:9px 16px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:14.5px;font-weight:500;cursor:pointer;transition:background .15s ease;}
+  nav button:hover{background:rgba(255,255,255,0.12);}
+  nav button.active{background:var(--accent);border-color:var(--accent);}
+
+  #connStatus{
+    font-size:12.5px;padding:6px 24px;background:var(--peg-dark);color:#C9D8DD;display:flex;align-items:center;gap:8px;
+  }
+  #connStatus .dot{width:7px;height:7px;border-radius:50%;background:#6FCF97;flex:none;}
+  #connStatus.offline .dot{background:var(--warn);}
+
+  #overdueBanner{display:none;background:var(--warn-tint);border-bottom:1px solid #E3B7A6;}
+  #overdueBanner .wrap{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;gap:16px;flex-wrap:wrap;}
+  #overdueBanner .msg{display:flex;align-items:center;gap:10px;color:var(--warn);font-weight:600;font-size:15px;}
+  #overdueBanner .dot{width:9px;height:9px;border-radius:50%;background:var(--warn);flex:none;}
+  #overdueBanner button{background:var(--warn);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
+
+  .hero{padding:44px 0 28px;}
+  .hero h1{font-size:34px;color:var(--ink);max-width:600px;}
+  .hero p.tagline{color:var(--ink-soft);margin-top:10px;font-size:15.5px;max-width:520px;}
+  .stat-row{display:flex;gap:28px;margin-top:28px;flex-wrap:wrap;}
+  .stat-big{background:var(--peg);color:#fff;border-radius:var(--radius-tag);padding:18px 24px;min-width:180px;position:relative;overflow:hidden;}
+  .stat-big::before{content:"";position:absolute;top:10px;right:12px;width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.45);}
+  .stat-big .num{font-family:'Kanit',sans-serif;font-size:38px;font-weight:700;line-height:1;}
+  .stat-big .lbl{font-size:13.5px;color:#C9D8DD;margin-top:6px;}
+  .cat-stats{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .cat-chip{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-tag);padding:10px 16px;font-size:13.5px;color:var(--ink-soft);}
+  .cat-chip b{color:var(--ink);font-family:'Kanit',sans-serif;font-weight:600;}
+
+  .tabs{display:flex;gap:8px;padding:20px 0 4px;flex-wrap:wrap;}
+  .tab{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:8px 8px 4px 4px;padding:10px 18px 10px 22px;font-family:'Sarabun',sans-serif;font-size:14.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+  .tab::before{content:"";position:absolute;left:9px;top:50%;transform:translateY(-50%);width:6px;height:6px;border-radius:50%;background:var(--line);}
+  .tab.active{background:var(--peg);color:#fff;border-color:var(--peg-dark);}
+  .tab.active::before{background:var(--accent);}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;padding:20px 0 8px;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;position:relative;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;}
+  .card::before{content:"";position:absolute;top:14px;left:14px;width:8px;height:8px;border-radius:50%;background:var(--canvas);border:1px solid var(--line);}
+  .card .icon{width:40px;height:40px;border-radius:9px;background:var(--peg-tint);display:flex;align-items:center;justify-content:center;color:var(--peg);margin-left:16px;}
+  .card h3{font-size:16.5px;color:var(--ink);margin-top:2px;}
+  .card .cat-tag{font-size:12px;color:var(--ink-soft);}
+  .card .avail-row{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:8px;}
+  .qty-badge{font-family:'Kanit',sans-serif;font-size:13px;font-weight:600;padding:5px 10px;border-radius:7px;}
+  .qty-badge.has{background:var(--ok-tint);color:var(--ok);}
+  .qty-badge.low{background:var(--accent-tint);color:var(--accent);}
+  .qty-badge.none{background:var(--warn-tint);color:var(--warn);}
+  .btn{font-family:'Sarabun',sans-serif;font-weight:600;font-size:14px;border:none;border-radius:8px;padding:9px 16px;cursor:pointer;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:disabled{background:#DCD6C6;color:#8B8474;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn-peg{background:var(--peg);color:#fff;}
+
+  .section-head{display:flex;align-items:center;justify-content:space-between;padding:36px 0 6px;}
+  .section-head h2{font-size:22px;}
+  .section-sub{color:var(--ink-soft);font-size:14px;margin-top:4px;}
+
+  .records{padding-bottom:60px;}
+  table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  thead th{text-align:left;font-family:'Kanit',sans-serif;font-weight:600;font-size:13px;color:var(--ink-soft);background:var(--peg-tint);padding:12px 14px;}
+  tbody td{padding:12px 14px;font-size:14px;border-top:1px solid var(--canvas);}
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 10px;border-radius:7px;}
+  .status.ok{background:var(--ok-tint);color:var(--ok);}
+  .status.soon{background:var(--accent-tint);color:var(--accent);}
+  .status.late{background:var(--warn-tint);color:var(--warn);}
+  .status.done{background:#EAEAE2;color:var(--ink-soft);}
+  .empty-row td{color:var(--ink-soft);text-align:center;padding:28px;}
+  .photo-link{color:var(--peg);text-decoration:underline;font-size:13px;}
+
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(23,26,30,0.5);align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;}
+  .modal{background:var(--surface);border-radius:14px;max-width:460px;width:100%;padding:26px;position:relative;}
+  .modal h2{font-size:20px;margin-bottom:4px;}
+  .modal .item-line{color:var(--ink-soft);font-size:14px;margin-bottom:18px;}
+  .modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;color:var(--ink-soft);cursor:pointer;line-height:1;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px;color:var(--ink);}
+  .field .hint{font-size:12px;color:var(--ink-soft);font-weight:400;margin-top:4px;}
+  .field input, .field select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-family:'Sarabun',sans-serif;font-size:14px;background:#fff;color:var(--ink);}
+  .field input:focus, .field select:focus{outline:2px solid var(--peg);outline-offset:1px;}
+  .field-row{display:flex;gap:12px;}
+  .field-row .field{flex:1;}
+  .photo-upload{border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--canvas);}
+  .photo-upload img{max-width:100%;max-height:140px;border-radius:8px;margin-top:8px;}
+  .photo-upload .ph-label{font-size:13.5px;color:var(--ink-soft);}
+  .modal .submit-row{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+  .privacy-note{font-size:12px;color:var(--ink-soft);background:var(--peg-tint);border-radius:8px;padding:10px 12px;margin-top:2px;margin-bottom:14px;}
+  .form-error{display:none;background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;margin-bottom:12px;}
+
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--peg-dark);color:#fff;padding:12px 20px;border-radius:9px;font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:all .25s ease;z-index:100;box-shadow:0 6px 18px rgba(0,0,0,0.2);max-width:90vw;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  footer{padding:28px 0 40px;color:var(--ink-soft);font-size:12.5px;border-top:1px solid var(--line);}
+
+  @media(max-width:640px){
+    .wrap{padding:0 16px;}
+    .header-inner{flex-direction:column;align-items:flex-start;gap:12px;}
+    nav{width:100%;justify-content:flex-start;flex-wrap:wrap;}
+    .hero h1{font-size:24px;}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+    .modal{padding:20px 16px;}
+    .field-row{flex-direction:column;gap:0;}
+    table, thead, tbody, th, td, tr{display:block;}
+    thead{display:none;}
+    tbody tr{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;padding:8px 4px;background:var(--surface);}
+    tbody td{border-top:none;display:flex;justify-content:space-between;gap:10px;}
+    tbody td::before{content:attr(data-label);font-weight:600;color:var(--ink-soft);}
+  }
+  @media(max-width:380px){
+    .grid{grid-template-columns:1fr 1fr;}
+    .stat-big{min-width:140px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap header-inner">
+    <div class="logo">
+      <div class="logo-mark">ย</div>
+      <div>
+        <div class="logo-text">ยืมได้</div>
+        <div class="logo-sub">คลังแบ่งปันอุปกรณ์ชุมชน</div>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-view="catalog">อุปกรณ์ทั้งหมด</button>
+      <button class="nav-btn" data-view="records">รายการยืม-คืน</button>
+    </nav>
+  </div>
+</header>
+
+<div id="connStatus"><span class="dot"></span><span id="connStatusText">กำลังเชื่อมต่อฐานข้อมูล...</span></div>
+
+<div id="overdueBanner">
+  <div class="wrap">
+    <div class="msg"><span class="dot"></span><span id="overdueText"></span></div>
+    <button id="notifyBtn">ส่งการแจ้งเตือนผู้ยืม</button>
+  </div>
+</div>
+
+<main>
+  <section id="view-catalog">
+    <div class="wrap">
+      <div class="hero">
+        <h1>ยืมของเท่าที่ต้องใช้ ไม่ต้องซื้อของที่ใช้ปีละครั้ง</h1>
+        <p class="tagline">เลือกอุปกรณ์จากคลังของชุมชน กรอกข้อมูลยืนยันตัวตน แล้วมารับของได้เลย ข้อมูลจำนวนของจะอัปเดตให้ทุกคนเห็นตรงกันแบบเรียลไทม์ผ่านฐานข้อมูลกลาง</p>
+        <div class="stat-row">
+          <div class="stat-big">
+            <div class="num" id="totalAvail">-</div>
+            <div class="lbl">ชิ้น พร้อมให้ยืมตอนนี้</div>
+          </div>
+          <div class="cat-stats" id="catStats"></div>
+        </div>
+      </div>
+
+      <div class="tabs" id="tabs"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </section>
+
+  <section id="view-records" style="display:none;">
+    <div class="wrap records">
+      <div class="section-head">
+        <div>
+          <h2>รายการยืม-คืนทั้งหมด</h2>
+          <div class="section-sub">สถานะจะเปลี่ยนเป็น “เกินกำหนด” เมื่อเกิน 7 วันนับจากวันที่ยืม (ข้อมูลมาจากฐานข้อมูลกลาง ทุกเครื่องเห็นตรงกัน)</div>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>อุปกรณ์</th><th>ผู้ยืม</th><th>วันที่ยืม</th><th>ครบกำหนดคืน</th><th>สถานะ</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="recordsBody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    ระบบนี้เชื่อมต่อฐานข้อมูลกลาง (MongoDB) จริง ข้อมูลจะไม่หายเมื่อรีเฟรชและทุกคนเห็นตรงกัน — รูปบัตรประชาชนถูกเก็บไว้บนเซิร์ฟเวอร์ ควรจำกัดสิทธิ์การเข้าถึงเฉพาะผู้ดูแลระบบเมื่อใช้งานจริง
+  </div>
+</footer>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">&times;</button>
+    <h2>ยืมอุปกรณ์</h2>
+    <div class="item-line" id="modalItemLine"></div>
+    <div class="privacy-note">ข้อมูลนี้ใช้เพื่อยืนยันตัวตนผู้ยืมและติดต่อกรณีเกินกำหนดคืนเท่านั้น</div>
+    <div class="form-error" id="formError"></div>
+    <form id="borrowForm">
+      <div class="field-row">
+        <div class="field"><label>ชื่อ</label><input type="text" id="f-firstname" required></div>
+        <div class="field"><label>นามสกุล</label><input type="text" id="f-lastname" required></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>อายุ</label><input type="number" id="f-age" min="1" max="120" required></div>
+        <div class="field"><label>จำนวนที่ยืม</label><input type="number" id="f-qty" min="1" value="1" required></div>
+      </div>
+      <div class="field">
+        <label>ที่อยู่</label>
+        <input type="text" id="f-address" placeholder="บ้านเลขที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด" required>
+      </div>
+      <div class="field">
+        <label>รูปถ่ายบัตรประชาชน</label>
+        <div class="photo-upload" id="photoUploadBox">
+          <div class="ph-label" id="photoLabel">แตะเพื่อเลือกรูปถ่ายบัตรประชาชน (รองรับทุกไฟล์รูปภาพจากอัลบั้ม)</div>
+          <img id="photoPreview" style="display:none;">
+          <input type="file" id="f-photo" accept="image/*,.heic,.heif,.pdf" style="display:none;">
+        </div>
+      </div>
+      <div class="field">
+        <label>วันที่ยืม</label>
+        <input type="date" id="f-borrowdate" required>
+        <div class="hint">ค่าเริ่มต้นคือวันนี้ — ปรับย้อนหลังได้เพื่อทดสอบระบบแจ้งเตือนเกิน 7 วัน</div>
+      </div>
+      <div class="submit-row">
+        <button type="button" class="btn btn-ghost" id="cancelBorrow">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary" id="submitBorrowBtn">ยืนยันการยืม</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  // ---------------------------------------------------------------
+  // ยืมได้ - เวอร์ชันเชื่อมต่อ backend จริง (Express + MongoDB)
+  // ข้อมูลทั้งหมดถูกเก็บที่ฐานข้อมูลกลาง ไม่ใช่ในเบราว์เซอร์อีกต่อไป
+  // โครงสร้าง: state -> api* (เรียก backend) -> render* (วาดหน้าจอ) -> modal -> init
+  // ---------------------------------------------------------------
+  const API_BASE = ''; // เว้นว่างไว้เพราะ frontend กับ backend เสิร์ฟจากเซิร์ฟเวอร์เดียวกัน
+
+  const ICONS = {
+    sports: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6c3 3 3 9.8 0 12.8M18.4 5.6c-3 3-3 9.8 0 12.8"/></svg>',
+    tools: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2-.5-.5-2 2.6-2.6z"/></svg>',
+    rec: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20l7-13 7 13H4z"/><path d="M9.5 20l2.5-6 2.5 6"/><path d="M11 3v3"/></svg>',
+    other: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>'
+  };
+  const CATEGORIES = [
+    {id:'sports', label:'อุปกรณ์กีฬา'},
+    {id:'tools', label:'เครื่องมือช่าง'},
+    {id:'rec', label:'อุปกรณ์นันทนาการ'},
+    {id:'other', label:'อื่นๆ'}
+  ];
+
+  // ----------------- state -----------------
+  let items = [];       // โหลดจาก GET /api/items
+  let records = [];     // โหลดจาก GET /api/records
+  let activeTab = 'all';
+  let pendingItemId = null;
+  let pendingPhotoFile = null;
+  let currentView = 'catalog';
+  let isModalOpen = false;
+
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+  function catLabel(id){ return CATEGORIES.find(c=>c.id===id).label; }
+
+  // ----------------- api calls -----------------
+  async function apiGetItems(){
+    const res = await fetch(API_BASE + '/api/items');
+    if(!res.ok) throw new Error('โหลดอุปกรณ์ไม่สำเร็จ');
+    return res.json();
+  }
+  async function apiGetRecords(){
+    const res = await fetch(API_BASE + '/api/records');
+    if(!res.ok) throw new Error('โหลดรายการยืม-คืนไม่สำเร็จ');
+    return res.json();
+  }
+  async function apiBorrow(formData){
+    const res = await fetch(API_BASE + '/api/records', { method:'POST', body: formData });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'ยืมของไม่สำเร็จ');
+    return data;
+  }
+  async function apiReturn(recordId){
+    const res = await fetch(API_BASE + '/api/records/' + recordId + '/return', { method:'POST' });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'คืนของไม่สำเร็จ');
+    return data;
+  }
+
+  function setConnStatus(ok, text){
+    const el = $('#connStatus');
+    el.classList.toggle('offline', !ok);
+    $('#connStatusText').textContent = text;
+  }
+
+  // โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์ทั้งหมด แล้ว re-render
+  async function refreshAll(){
+    try{
+      const [newItems, newRecords] = await Promise.all([apiGetItems(), apiGetRecords()]);
+      items = newItems;
+      records = newRecords;
+      setConnStatus(true, 'เชื่อมต่อฐานข้อมูลกลางอยู่ — ข้อมูลนี้เห็นตรงกันทุกเครื่อง');
+      renderStats();
+      renderTabs();
+      if(!isModalOpen) renderGrid();
+      if(currentView === 'records') renderRecords();
+      checkOverdue();
+    }catch(err){
+      setConnStatus(false, 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ตรวจสอบว่า backend รันอยู่หรือไม่');
+    }
+  }
+
+  // ----------------- rendering -----------------
+  function daysBetween(d1, d2){ return Math.floor((d2 - d1) / (1000*60*60*24)); }
+
+  function statusOf(rec){
+    if(rec.returned) return {key:'done', label:'คืนแล้ว'};
+    const today = new Date(); today.setHours(0,0,0,0);
+    const due = new Date(rec.dueDate);
+    const diff = daysBetween(today, due);
+    if(diff < 0) return {key:'late', label:'เกินกำหนด ' + Math.abs(diff) + ' วัน'};
+    if(diff <= 1) return {key:'soon', label:'ใกล้ครบกำหนด'};
+    return {key:'ok', label:'ปกติ'};
+  }
+
+  function renderStats(){
+    const totalAvail = items.reduce((s,i)=>s+i.available,0);
+    $('#totalAvail').textContent = totalAvail;
+    $('#catStats').innerHTML = CATEGORIES.map(c=>{
+      const n = items.filter(i=>i.category===c.id).reduce((s,i)=>s+i.available,0);
+      return `<div class="cat-chip">${c.label} <b>${n}</b></div>`;
+    }).join('');
+  }
+
+  function renderTabs(){
+    const all = [{id:'all', label:'ทั้งหมด'}, ...CATEGORIES];
+    $('#tabs').innerHTML = all.map(c=>
+      `<div class="tab ${activeTab===c.id?'active':''}" data-cat="${c.id}">${c.label}</div>`
+    ).join('');
+    $$('.tab').forEach(t=>t.addEventListener('click', ()=>{
+      activeTab = t.dataset.cat;
+      renderTabs(); renderGrid();
+    }));
+  }
+
+  function renderGrid(){
+    const list = activeTab === 'all' ? items : items.filter(i=>i.category===activeTab);
+    $('#grid').innerHTML = list.map(i=>{
+      const badgeClass = i.available === 0 ? 'none' : (i.available <= Math.ceil(i.total*0.3) ? 'low' : 'has');
+      return `
+      <div class="card">
+        <div class="icon">${ICONS[i.category]}</div>
+        <div class="cat-tag">${catLabel(i.category)}</div>
+        <h3>${i.name}</h3>
+        <div class="avail-row">
+          <span class="qty-badge ${badgeClass}">พร้อมยืม ${i.available}/${i.total}</span>
+          <button class="btn btn-primary" data-borrow="${i._id}" ${i.available===0?'disabled':''}>ยืม</button>
+        </div>
+      </div>`;
+    }).join('');
+    $$('[data-borrow]').forEach(b=>b.addEventListener('click', ()=>openModal(b.dataset.borrow)));
+  }
+
+  function renderRecords(){
+    const body = $('#recordsBody');
+    if(records.length === 0){
+      body.innerHTML = `<tr class="empty-row"><td colspan="6">ยังไม่มีรายการยืม — เริ่มยืมอุปกรณ์จากหน้าอุปกรณ์ทั้งหมด</td></tr>`;
+      return;
+    }
+    body.innerHTML = records.map(r=>{
+      const st = statusOf(r);
+      const bDate = new Date(r.borrowDate).toLocaleDateString('th-TH');
+      const dDate = new Date(r.dueDate).toLocaleDateString('th-TH');
+      return `
+      <tr>
+        <td data-label="อุปกรณ์">${r.itemName} <span style="color:var(--ink-soft);">×${r.qty}</span> — <a class="photo-link" href="${r.photoUrl}" target="_blank" rel="noopener">ดูรูปบัตร</a></td>
+        <td data-label="ผู้ยืม">${r.firstname} ${r.lastname}</td>
+        <td data-label="วันที่ยืม">${bDate}</td>
+        <td data-label="ครบกำหนดคืน">${dDate}</td>
+        <td data-label="สถานะ"><span class="status ${st.key}">${st.label}</span></td>
+        <td data-label="">${r.returned ? '' : `<button class="btn btn-peg" data-return="${r._id}">คืนของ</button>`}</td>
+      </tr>`;
+    }).join('');
+    $$('[data-return]').forEach(b=>b.addEventListener('click', ()=>returnItem(b.dataset.return)));
+  }
+
+  function checkOverdue(){
+    const overdue = records.filter(r => !r.returned && statusOf(r).key === 'late');
+    const banner = $('#overdueBanner');
+    if(overdue.length > 0){
+      banner.style.display = 'block';
+      $('#overdueText').textContent = `มี ${overdue.length} รายการเกินกำหนดคืนแล้ว`;
+    } else {
+      banner.style.display = 'none';
+    }
+    return overdue;
+  }
+
+  function showToast(msg){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2800);
+  }
+
+  $('#notifyBtn').addEventListener('click', ()=>{
+    const overdue = checkOverdue();
+    if(overdue.length === 0) return;
+    showToast(`จำลองส่งแจ้งเตือนไปยัง ${overdue.length} คนแล้ว: ` + overdue.map(r=>r.firstname).join(', '));
+  });
+
+  // ----------------- nav -----------------
+  $$('.nav-btn').forEach(btn=>btn.addEventListener('click', ()=>{
+    $$('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentView = btn.dataset.view;
+    $('#view-catalog').style.display = currentView === 'catalog' ? 'block' : 'none';
+    $('#view-records').style.display = currentView === 'records' ? 'block' : 'none';
+    if(currentView === 'records') renderRecords();
+  }));
+
+  // ----------------- modal -----------------
+  function openModal(itemId){
+    pendingItemId = itemId;
+    const item = items.find(i=>i._id===itemId);
+    $('#modalItemLine').textContent = `${item.name} · ${catLabel(item.category)} · เหลือ ${item.available} ชิ้น`;
+    $('#borrowForm').reset();
+    $('#formError').style.display = 'none';
+    $('#f-qty').max = item.available;
+    $('#f-qty').value = 1;
+    $('#photoPreview').style.display = 'none';
+    $('#photoLabel').textContent = 'แตะเพื่อเลือกรูปถ่ายบัตรประชาชน (รองรับทุกไฟล์รูปภาพจากอัลบั้ม)';
+    pendingPhotoFile = null;
+    $('#f-borrowdate').value = new Date().toISOString().slice(0,10);
+    $('#modalBackdrop').style.display = 'flex';
+    isModalOpen = true;
+  }
+  function closeModal(){
+    $('#modalBackdrop').style.display = 'none';
+    pendingItemId = null;
+    isModalOpen = false;
+  }
+  $('#modalClose').addEventListener('click', closeModal);
+  $('#cancelBorrow').addEventListener('click', closeModal);
+  $('#modalBackdrop').addEventListener('click', e=>{ if(e.target.id === 'modalBackdrop') closeModal(); });
+
+  $('#photoUploadBox').addEventListener('click', ()=> $('#f-photo').click());
+  $('#f-photo').addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    pendingPhotoFile = file;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      if(file.type.startsWith('image/')){
+        $('#photoPreview').src = ev.target.result;
+        $('#photoPreview').style.display = 'block';
+      } else {
+        $('#photoPreview').style.display = 'none';
+      }
+      $('#photoLabel').textContent = 'แนบไฟล์แล้ว: ' + file.name;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function showFormError(msg){
+    const el = $('#formError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  $('#borrowForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    $('#formError').style.display = 'none';
+
+    const item = items.find(i=>i._id===pendingItemId);
+    const qty = parseInt($('#f-qty').value, 10);
+    if(qty > item.available){ showFormError('จำนวนที่ยืมมากกว่าของที่มีอยู่'); return; }
+    if(!pendingPhotoFile){ showFormError('กรุณาแนบรูปถ่ายบัตรประชาชน'); return; }
+
+    const fd = new FormData();
+    fd.append('itemId', item._id);
+    fd.append('firstname', $('#f-firstname').value.trim());
+    fd.append('lastname', $('#f-lastname').value.trim());
+    fd.append('age', $('#f-age').value);
+    fd.append('address', $('#f-address').value.trim());
+    fd.append('qty', qty);
+    fd.append('borrowDate', $('#f-borrowdate').value);
+    fd.append('photo', pendingPhotoFile);
+
+    const submitBtn = $('#submitBorrowBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'กำลังบันทึก...';
+
+    try{
+      const rec = await apiBorrow(fd);
+      closeModal();
+      await refreshAll();
+      showToast(`บันทึกการยืม "${rec.itemName}" ให้คุณ${rec.firstname}เรียบร้อย`);
+    }catch(err){
+      showFormError(err.message);
+    }finally{
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'ยืนยันการยืม';
+    }
+  });
+
+  async function returnItem(recId){
+    try{
+      const rec = await apiReturn(recId);
+      await refreshAll();
+      showToast(`บันทึกการคืน "${rec.itemName}" แล้ว`);
+    }catch(err){
+      showToast(err.message);
+    }
+  }
+
+  // ----------------- init -----------------
+  refreshAll();
+  // โพลข้อมูลใหม่ทุก 8 วินาที เพื่อให้ทุกเครื่องเห็นความเปลี่ยนแปลงของกันและกัน
+  // (ถ้าต้องการอัปเดตทันทีแบบ push จริงๆ ให้ต่อยอดด้วย Socket.io แทนการโพล)
+  setInterval(refreshAll, 8000);
+})();
+</script>
+</body>
+</html>
