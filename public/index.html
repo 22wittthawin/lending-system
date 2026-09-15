@@ -53,6 +53,13 @@
   nav button{background:transparent;border:1px solid rgba(255,255,255,0.28);color:#fff;padding:9px 16px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:14.5px;font-weight:500;cursor:pointer;transition:background .15s ease;}
   nav button:hover{background:rgba(255,255,255,0.12);}
   nav button.active{background:var(--accent);border-color:var(--accent);}
+  nav button.admin-btn{margin-left:4px;border-color:rgba(255,255,255,0.28);}
+  nav button.admin-btn.is-admin{background:var(--ok);border-color:var(--ok);}
+
+  .photo-cell{display:flex;align-items:center;gap:8px;}
+  .btn-photo{background:var(--peg-tint);color:var(--peg);border:none;border-radius:7px;padding:5px 10px;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .locked-note{display:inline-flex;align-items:center;gap:5px;color:var(--ink-soft);font-size:12.5px;}
+  .locked-note svg{flex:none;}
 
   #connStatus{
     font-size:12.5px;padding:6px 24px;background:var(--peg-dark);color:#C9D8DD;display:flex;align-items:center;gap:8px;
@@ -175,6 +182,7 @@
     <nav>
       <button class="nav-btn active" data-view="catalog">อุปกรณ์ทั้งหมด</button>
       <button class="nav-btn" data-view="records">รายการยืม-คืน</button>
+      <button class="nav-btn admin-btn" id="adminToggleBtn">เข้าสู่ระบบผู้ดูแล</button>
     </nav>
   </div>
 </header>
@@ -219,7 +227,7 @@
       <table>
         <thead>
           <tr>
-            <th>อุปกรณ์</th><th>ผู้ยืม</th><th>วันที่ยืม</th><th>ครบกำหนดคืน</th><th>สถานะ</th><th></th>
+            <th>อุปกรณ์</th><th>ผู้ยืม</th><th>วันที่ยืม</th><th>ครบกำหนดคืน</th><th>สถานะ</th><th>รูปบัตร</th><th></th>
           </tr>
         </thead>
         <tbody id="recordsBody"></tbody>
@@ -230,7 +238,7 @@
 
 <footer>
   <div class="wrap">
-    ระบบนี้เชื่อมต่อฐานข้อมูลกลาง (MongoDB) จริง ข้อมูลจะไม่หายเมื่อรีเฟรชและทุกคนเห็นตรงกัน — รูปบัตรประชาชนถูกเก็บไว้บนเซิร์ฟเวอร์ ควรจำกัดสิทธิ์การเข้าถึงเฉพาะผู้ดูแลระบบเมื่อใช้งานจริง
+    ระบบนี้เชื่อมต่อฐานข้อมูลกลาง (MongoDB) จริง ข้อมูลจะไม่หายเมื่อรีเฟรชและทุกคนเห็นตรงกัน — รูปบัตรประชาชนถูกเก็บไว้บนเซิร์ฟเวอร์และจำกัดสิทธิ์ให้เฉพาะผู้ดูแลระบบที่ล็อกอินแล้วเท่านั้นจึงจะเปิดดูได้
   </div>
 </footer>
 
@@ -270,6 +278,25 @@
       <div class="submit-row">
         <button type="button" class="btn btn-ghost" id="cancelBorrow">ยกเลิก</button>
         <button type="submit" class="btn btn-primary" id="submitBorrowBtn">ยืนยันการยืม</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="adminModalBackdrop">
+  <div class="modal" style="max-width:360px;">
+    <button class="modal-close" id="adminModalClose">&times;</button>
+    <h2>เข้าสู่ระบบผู้ดูแล</h2>
+    <div class="item-line">กรอกรหัสผ่านเพื่อดูรูปบัตรประชาชนของผู้ยืมในรายการยืม-คืน</div>
+    <div class="form-error" id="adminFormError"></div>
+    <form id="adminLoginForm">
+      <div class="field">
+        <label>รหัสผ่านผู้ดูแล</label>
+        <input type="password" id="admin-password" required autocomplete="current-password">
+      </div>
+      <div class="submit-row">
+        <button type="button" class="btn btn-ghost" id="adminCancelBtn">ยกเลิก</button>
+        <button type="submit" class="btn btn-primary" id="adminSubmitBtn">เข้าสู่ระบบ</button>
       </div>
     </form>
   </div>
@@ -335,6 +362,67 @@
     const data = await res.json();
     if(!res.ok) throw new Error(data.error || 'คืนของไม่สำเร็จ');
     return data;
+  }
+
+  // ----------------- admin auth (สำหรับดูรูปบัตรประชาชน) -----------------
+  // token เก็บไว้ใน localStorage เพื่อไม่ต้องล็อกอินใหม่ทุกครั้งที่รีเฟรชหน้า
+  // ฝั่งเซิร์ฟเวอร์เป็นคนคุมสิทธิ์จริงๆ (ตรวจ token ทุกครั้งที่ขอดูรูป + token หมดอายุเอง)
+  let adminToken = localStorage.getItem('adminToken') || null;
+  function isAdmin(){ return !!adminToken; }
+
+  function setAdminToken(token){
+    adminToken = token;
+    if(token) localStorage.setItem('adminToken', token);
+    else localStorage.removeItem('adminToken');
+    const btn = $('#adminToggleBtn');
+    btn.textContent = isAdmin() ? 'ออกจากระบบผู้ดูแล' : 'เข้าสู่ระบบผู้ดูแล';
+    btn.classList.toggle('is-admin', isAdmin());
+    if(currentView === 'records') renderRecords();
+  }
+
+  async function apiAdminLogin(password){
+    const res = await fetch(API_BASE + '/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'เข้าสู่ระบบไม่สำเร็จ');
+    return data.token;
+  }
+
+  async function apiAdminLogout(){
+    if(!adminToken) return;
+    try{
+      await fetch(API_BASE + '/api/admin/logout', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + adminToken }
+      });
+    }catch(e){ /* เพิกเฉย — ยังไงก็ล้าง token ฝั่ง client ทิ้งอยู่ดี */ }
+  }
+
+  // เรียกดูรูปบัตรประชาชนแบบมีสิทธิ์: ยิง fetch พร้อม token แล้วเปิดเป็นแท็บใหม่
+  // (ไม่ใช้ลิงก์ href ตรงๆ เพราะจะไม่มีการแนบ token ไปด้วย และรูปจะไม่ถูกป้องกัน)
+  async function viewPhoto(recordId){
+    try{
+      const res = await fetch(API_BASE + '/api/admin/photos/' + recordId, {
+        headers: { 'Authorization': 'Bearer ' + adminToken }
+      });
+      if(res.status === 401){
+        setAdminToken(null);
+        showToast('เซสชันผู้ดูแลหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+        return;
+      }
+      if(!res.ok){
+        const data = await res.json().catch(()=>({}));
+        throw new Error(data.error || 'โหลดรูปภาพไม่สำเร็จ');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    }catch(err){
+      showToast(err.message);
+    }
   }
 
   function setConnStatus(ok, text){
@@ -414,24 +502,29 @@
   function renderRecords(){
     const body = $('#recordsBody');
     if(records.length === 0){
-      body.innerHTML = `<tr class="empty-row"><td colspan="6">ยังไม่มีรายการยืม — เริ่มยืมอุปกรณ์จากหน้าอุปกรณ์ทั้งหมด</td></tr>`;
+      body.innerHTML = `<tr class="empty-row"><td colspan="7">ยังไม่มีรายการยืม — เริ่มยืมอุปกรณ์จากหน้าอุปกรณ์ทั้งหมด</td></tr>`;
       return;
     }
     body.innerHTML = records.map(r=>{
       const st = statusOf(r);
       const bDate = new Date(r.borrowDate).toLocaleDateString('th-TH');
       const dDate = new Date(r.dueDate).toLocaleDateString('th-TH');
+      const photoCell = isAdmin()
+        ? `<button class="btn-photo" data-photo="${r._id}">ดูรูปบัตร</button>`
+        : `<span class="locked-note" title="เข้าสู่ระบบผู้ดูแลเพื่อดูรูปบัตรประชาชน"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>เฉพาะผู้ดูแล</span>`;
       return `
       <tr>
-        <td data-label="อุปกรณ์">${r.itemName} <span style="color:var(--ink-soft);">×${r.qty}</span> — <a class="photo-link" href="${r.photoUrl}" target="_blank" rel="noopener">ดูรูปบัตร</a></td>
+        <td data-label="อุปกรณ์"><div class="photo-cell">${r.itemName} <span style="color:var(--ink-soft);">×${r.qty}</span></div></td>
         <td data-label="ผู้ยืม">${r.firstname} ${r.lastname}</td>
         <td data-label="วันที่ยืม">${bDate}</td>
         <td data-label="ครบกำหนดคืน">${dDate}</td>
         <td data-label="สถานะ"><span class="status ${st.key}">${st.label}</span></td>
+        <td data-label="รูปบัตร">${photoCell}</td>
         <td data-label="">${r.returned ? '' : `<button class="btn btn-peg" data-return="${r._id}">คืนของ</button>`}</td>
       </tr>`;
     }).join('');
     $$('[data-return]').forEach(b=>b.addEventListener('click', ()=>returnItem(b.dataset.return)));
+    $$('[data-photo]').forEach(b=>b.addEventListener('click', ()=>viewPhoto(b.dataset.photo)));
   }
 
   function checkOverdue(){
@@ -564,7 +657,51 @@
     }
   }
 
+  // ----------------- admin modal wiring -----------------
+  $('#adminToggleBtn').addEventListener('click', async ()=>{
+    if(isAdmin()){
+      await apiAdminLogout();
+      setAdminToken(null);
+      showToast('ออกจากระบบผู้ดูแลแล้ว');
+    } else {
+      $('#adminFormError').style.display = 'none';
+      $('#admin-password').value = '';
+      $('#adminModalBackdrop').style.display = 'flex';
+      setTimeout(()=>$('#admin-password').focus(), 0);
+    }
+  });
+  $('#adminModalClose').addEventListener('click', ()=> $('#adminModalBackdrop').style.display = 'none');
+  $('#adminCancelBtn').addEventListener('click', ()=> $('#adminModalBackdrop').style.display = 'none');
+  $('#adminModalBackdrop').addEventListener('click', e=>{ if(e.target.id === 'adminModalBackdrop') $('#adminModalBackdrop').style.display = 'none'; });
+
+  $('#adminLoginForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    $('#adminFormError').style.display = 'none';
+    const pw = $('#admin-password').value;
+    const btn = $('#adminSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'กำลังตรวจสอบ...';
+    try{
+      const token = await apiAdminLogin(pw);
+      setAdminToken(token);
+      $('#adminModalBackdrop').style.display = 'none';
+      showToast('เข้าสู่ระบบผู้ดูแลสำเร็จ');
+    }catch(err){
+      $('#adminFormError').textContent = err.message;
+      $('#adminFormError').style.display = 'block';
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'เข้าสู่ระบบ';
+    }
+  });
+
   // ----------------- init -----------------
+  // ตั้งค่าปุ่มผู้ดูแลให้ตรงกับสถานะ token ที่มีอยู่ (ถ้าเคยล็อกอินไว้และยังไม่หมดอายุ)
+  (function initAdminBtnLabel(){
+    const btn = $('#adminToggleBtn');
+    btn.textContent = isAdmin() ? 'ออกจากระบบผู้ดูแล' : 'เข้าสู่ระบบผู้ดูแล';
+    btn.classList.toggle('is-admin', isAdmin());
+  })();
   refreshAll();
   // โพลข้อมูลใหม่ทุก 8 วินาที เพื่อให้ทุกเครื่องเห็นความเปลี่ยนแปลงของกันและกัน
   // (ถ้าต้องการอัปเดตทันทีแบบ push จริงๆ ให้ต่อยอดด้วย Socket.io แทนการโพล)
