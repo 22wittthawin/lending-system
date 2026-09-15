@@ -6,6 +6,7 @@ const connectDB = require('./config/db');
 
 const itemsRouter = require('./routes/items');
 const recordsRouter = require('./routes/records');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 
@@ -14,12 +15,13 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 
-// เสิร์ฟรูปบัตรประชาชนที่อัปโหลดไว้ (ในระบบจริงควรจำกัดสิทธิ์เข้าถึงโฟลเดอร์นี้ให้เฉพาะผู้ดูแล)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// หมายเหตุ: ไม่เสิร์ฟโฟลเดอร์ uploads แบบสาธารณะอีกต่อไป (ก่อนหน้านี้ใครก็เปิดลิงก์รูปดูได้)
+// รูปบัตรประชาชนต้องเข้าถึงผ่าน /api/admin/photos/:recordId ซึ่งต้องล็อกอินผู้ดูแลก่อนเท่านั้น
 
 // API
 app.use('/api/items', itemsRouter);
 app.use('/api/records', recordsRouter);
+app.use('/api/admin', adminRouter);
 
 // เสิร์ฟหน้าเว็บ (frontend) จากโฟลเดอร์ ../public
 app.use(express.static(path.join(__dirname, '..', 'public')));
